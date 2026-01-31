@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-import { applyBase } from "./_base.js";
 
 const taskSchema = new mongoose.Schema(
   {
@@ -62,43 +61,10 @@ const taskSchema = new mongoose.Schema(
     orderNum: { type: Number, default: 0 },
   },
   {
-    // ... other schema options ...
-  }
+    timestamps: true,
+    versionKey: false,
+  },
 );
 
-// Index theo DBML + thực tế query
-taskSchema.index({ teamId: 1 });
-taskSchema.index({ groupId: 1 });
-taskSchema.index({ folderId: 1 });
-taskSchema.index({ parentTaskId: 1 });
-taskSchema.index({ ownerUserId: 1 });
-taskSchema.index({ dueDate: 1 });
-
-taskSchema.index({ teamId: 1, groupId: 1, folderId: 1, orderNum: 1 });
-taskSchema.index({ ownerUserId: 1, createdAt: -1 });
-
-// Validate scope
-taskSchema.pre("validate", function (next) {
-  const isQuick = !!this.ownerUserId && !this.teamId && !this.groupId;
-  const isTeam = !!this.teamId;
-
-  if (!isQuick && !isTeam) {
-    return next(
-      new ErrorResponse(
-        "Task scope invalid: must be a quick task (ownerUserId) or team task (teamId).",
-        400,
-        "TASK_SCOPE_INVALID"
-      )
-    );
-  }
-
-  if (isQuick && (this.groupId || this.folderId)) {
-    return next(new ErrorResponse("Quick task cannot belong to a group/folder.", 400, "QUICK_TASK_INVALID_HIERARCHY"));
-  }
-
-  next();
-});
-
-applyBase(taskSchema);
-
-export const Task = mongoose.models.Task || mongoose.model("Task", taskSchema);
+const Task = mongoose.model("Task", taskSchema);
+export default Task;
