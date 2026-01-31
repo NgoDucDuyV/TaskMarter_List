@@ -7,7 +7,7 @@ import crypto from "crypto";
 import ErrorResponse from "../utils/ErrorResponse.js";
 import Session from "../Models/session.model.js";
 
-const ACCESS_TOKEN_TTL = "15s"; // thuờng là dưới 15m
+const ACCESS_TOKEN_TTL = "15m"; // thuờng là dưới 15m
 const REFRESH_TOKEN_TTL = 14 * 24 * 60 * 60 * 1000; // 14 ngày
 export const SignUp = async (req, res) => {
   try {
@@ -77,7 +77,7 @@ export const SignIn = async (req, res) => {
     const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
 
     console.log(isPasswordValid);
-    
+
     if (!isPasswordValid) {
       return res
         .status(400)
@@ -162,7 +162,7 @@ export const SignOut = async (req, res, next) => {
 
 export const getProfile = async (req, res, next) => {
   try {
-    const user = await User.findById(req.user).select("-passwordHash");
+    const user = await User.findById(req.user.userId).select("-passwordHash");
     if (!user) {
       return next(new ErrorResponse("User not found", 404));
     }
