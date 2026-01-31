@@ -1,0 +1,15 @@
+{"location":"src/server.js:33","message":"Attempting to connect to DB and start server","timestamp":1769785474534,"sessionId":"debug-session","hypothesisId":"A"}
+{"location":"src/server.js:36","message":"DB connected, attempting to start server","data":{"port":"5001"},"timestamp":1769785474616,"sessionId":"debug-session","hypothesisId":"D"}
+{"location":"src/server.js:38","message":"Server started successfully","data":{"port":"5001"},"timestamp":1769785474620,"sessionId":"debug-session","hypothesisId":"D"}
+{"location":"src/server.js:33","message":"Attempting to connect to DB and start server","timestamp":1769785498408,"sessionId":"debug-session","hypothesisId":"A"}
+{"location":"src/server.js:36","message":"DB connected, attempting to start server","data":{"port":"5001"},"timestamp":1769785498463,"sessionId":"debug-session","hypothesisId":"D"}
+{"location":"src/server.js:38","message":"Server started successfully","data":{"port":"5001"},"timestamp":1769785498468,"sessionId":"debug-session","hypothesisId":"D"}
+{"location":"src/server.js:33","message":"Attempting to connect to DB and start server","timestamp":1769785796697,"sessionId":"debug-session","hypothesisId":"A"}
+{"location":"src/server.js:36","message":"DB connected, attempting to start server","data":{"port":"5001"},"timestamp":1769785796762,"sessionId":"debug-session","hypothesisId":"D"}
+{"location":"src/server.js:38","message":"Server started successfully","data":{"port":"5001"},"timestamp":1769785796767,"sessionId":"debug-session","hypothesisId":"D"}
+{"location":"src/server.js:33","message":"Attempting to connect to DB and start server","timestamp":1769785889127,"sessionId":"debug-session","hypothesisId":"A"}
+{"location":"src/server.js:36","message":"DB connected, attempting to start server","data":{"port":"5001"},"timestamp":1769785889282,"sessionId":"debug-session","hypothesisId":"D"}
+{"location":"src/server.js:38","message":"Server started successfully","data":{"port":"5001"},"timestamp":1769785889289,"sessionId":"debug-session","hypothesisId":"D"}
+{"location":"src/server.js:33","message":"Attempting to connect to DB and start server","timestamp":1769785931194,"sessionId":"debug-session","hypothesisId":"A"}
+{"location":"src/server.js:36","message":"DB connected, attempting to start server","data":{"port":"5001"},"timestamp":1769785931244,"sessionId":"debug-session","hypothesisId":"D"}
+{"location":"src/server.js:38","message":"Server started successfully","data":{"port":"5001"},"timestamp":1769785931249,"sessionId":"debug-session","hypothesisId":"D"}
