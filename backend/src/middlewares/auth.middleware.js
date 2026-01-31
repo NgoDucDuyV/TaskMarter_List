@@ -3,6 +3,8 @@ import jwt from "jsonwebtoken";
 export const authMiddleware = (req, res, next) => {
   const token = req.header("Authorization");
 
+  console.log(token);
+
   if (!token) {
     return res.status(401).json({
       success: false,
@@ -13,9 +15,10 @@ export const authMiddleware = (req, res, next) => {
   try {
     const decoded = jwt.verify(
       token.replace("Bearer ", ""),
-      process.env.JWT_SECRET,
+      process.env.ACCESS_TOKEN_SECSET,
     );
-    req.user = decoded.id;
+
+    req.user = decoded;
     next();
   } catch (error) {
     return res.status(401).json({
