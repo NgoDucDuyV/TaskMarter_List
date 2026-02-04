@@ -1,10 +1,11 @@
+/* eslint-disable react-hooks/rules-of-hooks */
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useTaskForm } from "@/contexts/task-form-context";
-import { useCreateTask } from "@/hooks/task.hooks";
+import { useTaskDetail, useUpdateTask } from "@/hooks/task.hooks";
 import { Label } from "@radix-ui/react-label";
-import { ListPlus, X } from "lucide-react";
+import { ListPlus, Loader, X } from "lucide-react";
 import {
     Select,
     SelectContent,
@@ -15,6 +16,8 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Controller, useForm } from "react-hook-form";
+import { toast } from "sonner";
+import { useEffect } from "react";
 
 type FormValues = {
     title: string;
@@ -31,16 +34,20 @@ const inputClass =
 
 const labelClass =
     "text-xs font-semibold uppercase tracking-wide text-slate-500";
+type TTaskEditPageProps = {
+    idTask: string | number | null
+}
+const TaskEditPage = ({ idTask }: TTaskEditPageProps) => {
+    console.log(idTask);
 
-const TaskAddPage = () => {
-    const { togglefromadd, closefromadd } = useTaskForm();
-    const createTask = useCreateTask();
-
+    const { toopenfromedit, closefromedit } = useTaskForm();
+    const updateTask = useUpdateTask();
     const {
         register,
         control,
         handleSubmit,
         formState: { errors },
+        reset,
         watch,
     } = useForm<FormValues>({
         defaultValues: {
@@ -52,24 +59,63 @@ const TaskAddPage = () => {
         },
     });
 
+
+    const { isLoading, error, data } = useTaskDetail(idTask)
+
+
+    if (error) {
+        toast.error(`${error.message}`, {
+            position: "top-right"
+        })
+    }
+
+    const toDateInput = (value?: string | null) => {
+        if (!value) return undefined;
+        return value.slice(0, 10); // YYYY-MM-DD
+    };
+
+    useEffect(() => {
+        if (!data) return;
+        reset({
+            title: data.title,
+            description: data.description ?? "",
+            priority: data.priority,
+            startDate: toDateInput(data.startDate),
+            dueDate: toDateInput(data.dueDate),
+        });
+    }, [data, reset]);
+
+
     const onSubmit = (values: FormValues) => {
-        createTask.mutate(
+        if (!idTask) return;
+
+        updateTask.mutate(
             {
-                title: values.title,
-                description: values.description,
-                priority: values.priority,
-                startDate: values.startDate
-                    ? new Date(values.startDate).toISOString()
-                    : undefined,
-                dueDate: values.dueDate
-                    ? new Date(values.dueDate).toISOString()
-                    : undefined,
+                id: idTask,
+                body: {
+                    title: values.title,
+                    description: values.description,
+                    priority: values.priority,
+                    startDate: values.startDate
+                        ? new Date(values.startDate).toISOString()
+                        : undefined,
+                    dueDate: values.dueDate
+                        ? new Date(values.dueDate).toISOString()
+                        : undefined,
+                },
             },
             {
-                onSuccess: () => closefromadd(),
+                onSuccess: () => closefromedit(),
             }
         );
     };
+
+    if (isLoading) {
+        return (
+            <Loader/>
+        )
+    }
+
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
@@ -100,7 +146,7 @@ const TaskAddPage = () => {
                     <Button
                         type="button"
                         variant="ghost"
-                        onClick={togglefromadd}
+                        onClick={toopenfromedit}
                         className="h-9 w-9 p-0 text-slate-500 hover:text-slate-900 hover:bg-slate-100"
                     >
                         <X className="h-5 w-5" />
@@ -221,7 +267,7 @@ const TaskAddPage = () => {
 
                         <Button
                             type="submit"
-                            disabled={createTask.isPending || !watch("title")}
+                            disabled={updateTask.isPending || !watch("title")}
                             className="
                                 h-11 px-6 rounded-xl
                                 bg-primary hover:bg-primary/90
@@ -232,7 +278,7 @@ const TaskAddPage = () => {
                             "
                         >
                             <ListPlus className="h-5 w-5" />
-                            {createTask.isPending ? "Đang tạo..." : "Tạo nhiệm vụ"}
+                            {updateTask.isPending ? "Đang Update..." : "Update"}
                         </Button>
                     </div>
                 </form>
@@ -241,4 +287,4 @@ const TaskAddPage = () => {
     );
 };
 
-export default TaskAddPage;
+export default TaskEditPage;

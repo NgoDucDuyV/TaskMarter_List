@@ -54,7 +54,7 @@ export function MultiStepForm() {
   };
 
   const navigate = useNavigate()
-  const { signUp } = useAuthStore()
+  const { signUp, isSign } = useAuthStore()
   const handleSubmit = async () => {
     console.log('Form submitted:', formData);
 
@@ -62,7 +62,8 @@ export function MultiStepForm() {
     
     await signUp(username, email, lastName, firstName, dateOfBirth, password)
     
-    navigate('/signin')
+    if (isSign) return
+    navigate("/signin")
   };
 
   return (
