@@ -25,6 +25,14 @@ const teamInviteSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    status: {
+      type: String,
+      enum: ["pending", "accepted", "declined", "revoked"],
+      default: "pending",
+      required: true,
+    },
+    inviteLink: { type: String, default: null },
+    resendCount: { type: Number, default: 0 },
   },
   { timestamps: { createdAt: true, updatedAt: false } },
 );

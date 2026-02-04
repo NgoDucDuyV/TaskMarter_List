@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/immutability */
 import { useState } from 'react';
 import { Lock, Eye, EyeOff, CheckCircle2, Circle } from 'lucide-react';
 import { type FormData } from '@/components/Auth/MultiStepForm';

@@ -1,11 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { ImageCarousel } from './ImageCarousel'
+import { ImageCarousel } from '../../components/Auth/ImageCarousel'
 import { Toaster, toast } from 'sonner'
-import { SocialSignIn } from '../SocialSignIn'
-import { Button } from '../ui/button'
-import { Label } from '../ui/label'
+import { SocialSignIn } from '../../components/SocialSignIn'
+import { Button } from '../../components/ui/button'
+import { Label } from '../../components/ui/label'
 import { Mail } from 'lucide-react'
-import { Input } from '../ui/input'
+import { Input } from '../../components/ui/input'
 import { useZodValidation } from '@/hooks/useZodValidation'
 import { signin } from '@/schemas'
 import { Link, useNavigate } from 'react-router-dom'
@@ -35,8 +35,7 @@ export const SignInFlow = () => {
             position: "top-right",
             className: "bg-indigo-400 text-white",
         });
-
-
+        
         shownRef.current = true;
     }, []);
     const updateFormData = (data: Partial<FormData>) => {
@@ -46,7 +45,7 @@ export const SignInFlow = () => {
     const [error, setErrors] = useState<TErrorStepOne>({});
     const navigate = useNavigate();
     const validate = useZodValidation(signin);
-    const { SignIn } = useAuthStore();
+    const { SignIn, isSign } = useAuthStore();
     const handleSubmit = async (e: React.FormEvent) => {
 
         e.preventDefault();
@@ -59,7 +58,8 @@ export const SignInFlow = () => {
 
         const { email, password } = formData;
         await SignIn(email, password)
-
+        
+        if (isSign) return
         navigate("/")
     };
     return (

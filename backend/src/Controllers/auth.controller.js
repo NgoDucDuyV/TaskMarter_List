@@ -1,5 +1,4 @@
 import { User } from "../Models/user.model";
-import { RefreshToken } from "../Models/refreshToken.model";
 
 import bcrypt from "bcryptjs";
 import Jwt from "jsonwebtoken";
@@ -13,15 +12,6 @@ export const SignUp = async (req, res) => {
   try {
     const { username, password, email, firstName, lastName, dateOfBirth } =
       req.body;
-    console.log(req.body);
-    if (!username || !password || !email || !firstName || !lastName) {
-      return res.status(400).json({
-        status: false,
-        message:
-          " Tài khoản không thể thiếu các trường dữ liệu username, password, email, firstName và lasName",
-      });
-    }
-
     // Kiểm tra username có tồn tại chưa
     const duplicate = await User.findOne({ email }); // mã hóa Password
 
@@ -76,8 +66,6 @@ export const SignIn = async (req, res) => {
 
     const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
 
-    console.log(isPasswordValid);
-
     if (!isPasswordValid) {
       return res
         .status(400)
@@ -125,53 +113,61 @@ export const SignIn = async (req, res) => {
   }
 };
 
-export const getCurrentUser = async (req, res, next) => {
+export const SignOut = async (req, res) => {
   try {
-    const user = await User.findById(req.user).select("-passwordHash");
-    if (!user) {
-      return next(new ErrorResponse("User not found", 404));
+    // lấy refresh token từ cookie
+    const token = req.cookies?.refreshToken;
+
+    if (token) {
+      // xoá refresh token trong Session
+      await Session.deleteOne({ refreshToken: token });
+
+      // xoá cookie
+      res.clearCookie("refreshToken");
     }
-    res.status(200).json({
-      success: true,
-      message: "User information retrieved successfully",
-      data: user,
-    });
+
+    return res.sendStatus(204);
   } catch (error) {
-    next(error);
+    console.error("Lỗi khi gọi signOut", error);
+    return res.status(500).json({ message: "Lỗi hệ thống" });
   }
 };
 
-export const SignOut = async (req, res, next) => {
-  const cookies = req.cookies;
-  if (!cookies?.refreshToken) {
-    return res.sendStatus(204); // Không có refresh token, không có gì để xóa
-  }
-  const refreshToken = cookies.refreshToken;
-
-  // Xóa refresh token khỏi DB
-  await RefreshToken.deleteOne({ token: refreshToken });
-
-  // Xóa refresh token khỏi cookie
-  res.clearCookie("refreshToken", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-  });
-
-  res.sendStatus(204);
-};
-
-export const getProfile = async (req, res, next) => {
+export const RefreshToken = async (req, res) => {
   try {
-    const user = await User.findById(req.user.userId).select("-passwordHash");
-    if (!user) {
-      return next(new ErrorResponse("User not found", 404));
+    // lấy refresh token từ cookie
+    const token = req.cookies?.refreshToken;
+
+    if (!token) {
+      return res.status(401).json({ message: "Token không tồn tại." });
     }
-    res.status(200).json({
-      success: true,
-      message: "User profile retrieved successfully",
-      data: user,
-    });
+    // so với refresh token trong db
+    const session = await Session.findOne({ refreshToken: token }).populate(
+      "userId",
+      "-passwordHash",
+    );
+    if (!session) {
+      return res
+        .status(403)
+        .json({ message: "Token không hợp lệ hoặc đã hết hạn" });
+    }
+    // kiểm tra hết hạn chưa
+    if (session.expiresAt < new Date()) {
+      return res.status(403).json({ message: "Token đã hết hạn." });
+    }
+    // tạo access token mới
+    const accessToken = Jwt.sign(
+      {
+        userId: session.userId?._id,
+        role: session.userId?.role,
+      },
+      process.env.ACCESS_TOKEN_SECSET,
+      { expiresIn: ACCESS_TOKEN_TTL },
+    );
+    // return
+    return res.status(200).json({ accessToken });
   } catch (error) {
-    next(error);
+    console.error("Lỗi khi gọi refreshToken", error);
+    return res.status(500).json({ message: "Lỗi hệ thống" });
   }
 };

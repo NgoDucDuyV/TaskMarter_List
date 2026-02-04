@@ -1,12 +1,18 @@
-import React from 'react'
-import Layout from "./Siderbar"
-const index = () => {
+import Layout from "./Siderbar";
+import { SidebarProviderContext } from "@/contexts/sidebar-context";
+import { TaskFormProvider } from "@/contexts/task-form-context";
+
+const Index = () => {
+
     return (
         <>
-            {/* Siderbar */}
-            <Layout/>
+        <SidebarProviderContext>
+            <TaskFormProvider>
+                <Layout />
+            </TaskFormProvider>
+        </SidebarProviderContext>
         </>
-    )
-}
+    );
+};
 
-export default index
+export default Index;

@@ -1,23 +1,25 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useEffect, useState } from "react";
 import { Navigate, Outlet } from "react-router-dom";
-import Loader from "./Loader";
+import Loader from "../Loader";
+export type AuthContextType = {
+  accessToken: string | null;
+  loading: boolean;
+  Refresh: () => Promise<void>;
+};
+
 const ProtectedRoute = () => {
-  const { accessToken, loading } = useAuthStore();
+  const { accessToken, loading, Refresh } = useAuthStore();
   const [starting, setStarting] = useState(true);
-
-  const init = async () => {
+  
+  const init = async (): Promise<void> => {
     // có thể xảy ra khi refresh trang
-    // if (!accessToken) {
-    //   await refresh();
-    //   console.log(accessToken);
-    // }
+    if (!accessToken) {
+      await Refresh();
+    }
 
-    // if (accessToken && !user) {
-    //   await fetchMe();
-    // }
-
-    setStarting(false);
+    setStarting(false)
   };
 
   useEffect(() => {
@@ -41,7 +43,9 @@ const ProtectedRoute = () => {
     );
   }
 
-  return <Outlet></Outlet>;
+  return (
+    <Outlet />
+  );
 };
 
 export default ProtectedRoute;
