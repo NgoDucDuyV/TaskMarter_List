@@ -1,7 +1,7 @@
 import Joi from "joi";
 export const validateRequest = (schema) => {
   return (req, res, next) => {
-    const { error, valule } = schema.validate(req.body, {
+    const { error, value } = schema.validate(req.body, {
       abortEarly: false,
       stripUnknown: true,
     });
@@ -12,6 +12,9 @@ export const validateRequest = (schema) => {
         details: error.details.map((err) => err.message),
       });
     }
+
+    // replace body with validated/stripped value
+    req.body = value;
     next();
   };
 };

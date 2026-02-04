@@ -1,18 +1,20 @@
 import Task from "../Models/task.model.js";
 import ErrorResponse from "../utils/ErrorResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { TeamMember } from "../Models/teamMember.model.js";
 
 export const CreateTask = asyncHandler(async (req, res, next) => {
-  const { title, description, priority, startDate, dueDate, createdBy } =
-    req.body; // Thêm createdBy
+  const { title, description, priority, startDate, dueDate } = req.body;
 
+  console.log(req.user);
+  // Thêm createdBy
   const task = await Task.create({
     title,
     description,
     priority,
     startDate,
     dueDate,
-    createdBy, // Lấy từ body
+    createdBy: req.user.userId, // Lấy từ body
   });
 
   res.status(201).json({
@@ -21,23 +23,51 @@ export const CreateTask = asyncHandler(async (req, res, next) => {
   });
 });
 
-// @desc    Lấy tất cả các tasks
-// @route   GET /api/tasks
-// @access  Private
+export const GetAllTasksUser = asyncHandler(async (req, res, next) => {
+  // Support filtering and pagination: status, priority, q (search), page, limit
+  const { status, priority, q } = req.query;
+  const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+  const limit = Math.min(parseInt(req.query.limit, 10) || 10, 100);
+  const skip = (page - 1) * limit;
+
+  const query = { createdBy: req.user.userId };
+  if (status) query.status = status;
+  if (priority) query.priority = priority;
+  if (q) {
+    const regex = new RegExp(String(q), "i");
+    query.$or = [{ title: regex }, { description: regex }];
+  }
+
+  const [items, total] = await Promise.all([
+    Task.find(query)
+      .populate("ownerUserId", "username email")
+      .populate("createdBy", "username email")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
+    Task.countDocuments(query),
+  ]);
+
+  res.status(200).json({
+    success: true,
+    data: { items, total, page, limit },
+  });
+});
+
 export const GetAllTasks = asyncHandler(async (req, res, next) => {
-  // Logic lọc, phân trang, sắp xếp có thể được thêm vào đây
-  // Ví dụ: chỉ lấy tasks của user hiện tại hoặc của team
   const query = {};
 
+  console.log(query);
+
   if (req.user.role === "user") {
-    query.ownerUserId = req.user.id; // Chỉ lấy quick tasks của user
-    // Hoặc lấy tasks của team mà user là thành viên
-    // Cần thêm logic để join với TeamMember model
+    query.ownerUserId = req.user.id;
   }
 
   const tasks = await Task.find(query)
     .populate("ownerUserId", "username email")
-    .populate("createdBy", "username email");
+    .populate("createdBy", "username email")
+    .sort({ createdAt: -1 })
+    .limit(7);
 
   res.status(200).json({
     success: true,
@@ -46,10 +76,8 @@ export const GetAllTasks = asyncHandler(async (req, res, next) => {
   });
 });
 
-// @desc    Lấy một task theo ID
-// @route   GET /api/tasks/:id
-// @access  Private
 export const GetTaskById = asyncHandler(async (req, res, next) => {
+  const userId = String(req.user?.userId || req.user?.id);
   const task = await Task.findById(req.params.id)
     .populate("ownerUserId", "username email")
     .populate("createdBy", "username email");
@@ -64,21 +92,34 @@ export const GetTaskById = asyncHandler(async (req, res, next) => {
     );
   }
 
-  // Kiểm tra quyền truy cập (chỉ owner hoặc thành viên team mới được xem)
-  if (
-    task.ownerUserId &&
-    task.ownerUserId.toString() !== req.user.id &&
-    req.user.role !== "admin"
-  ) {
-    return next(
-      new ErrorResponse(
-        `User ${req.user.id} is not authorized to access this task`,
-        403,
-        "NOT_AUTHORIZED",
-      ),
-    );
+  // Check access permission
+  if (task.teamId) {
+    // Team task: check if user is member
+    const teamMember = await TeamMember.findOne({
+      teamId: task.teamId,
+      userId,
+    });
+    if (!teamMember) {
+      return next(
+        new ErrorResponse(
+          "Bạn không có quyền truy cập task này",
+          403,
+          "NOT_AUTHORIZED",
+        ),
+      );
+    }
+  } else if (task.ownerUserId) {
+    // Personal task: only owner can view
+    if (String(task.ownerUserId) !== userId && req.user.role !== "admin") {
+      return next(
+        new ErrorResponse(
+          "Bạn không có quyền truy cập task này",
+          403,
+          "NOT_AUTHORIZED",
+        ),
+      );
+    }
   }
-  // Thêm logic kiểm tra nếu là task của team
 
   res.status(200).json({
     success: true,
@@ -90,6 +131,7 @@ export const GetTaskById = asyncHandler(async (req, res, next) => {
 // @route   PUT /api/tasks/:id
 // @access  Private
 export const UpdateTask = asyncHandler(async (req, res, next) => {
+  const userId = String(req.user?.userId || req.user?.id);
   let task = await Task.findById(req.params.id);
 
   if (!task) {
@@ -102,21 +144,34 @@ export const UpdateTask = asyncHandler(async (req, res, next) => {
     );
   }
 
-  // Kiểm tra quyền truy cập (chỉ owner hoặc thành viên team mới được cập nhật)
-  if (
-    task.ownerUserId &&
-    task.ownerUserId.toString() !== req.user.id &&
-    req.user.role !== "admin"
-  ) {
-    return next(
-      new ErrorResponse(
-        `User ${req.user.id} is not authorized to update this task`,
-        403,
-        "NOT_AUTHORIZED",
-      ),
-    );
+  // Check update permission
+  if (task.teamId) {
+    // Team task: check if user is admin/owner of team
+    const teamMember = await TeamMember.findOne({
+      teamId: task.teamId,
+      userId,
+    });
+    if (!teamMember || (teamMember.role !== "owner" && teamMember.role !== "admin")) {
+      return next(
+        new ErrorResponse(
+          "Bạn không có quyền cập nhật task này",
+          403,
+          "NOT_AUTHORIZED",
+        ),
+      );
+    }
+  } else if (task.ownerUserId) {
+    // Personal task: only owner can update
+    if (String(task.ownerUserId) !== userId && req.user.role !== "admin") {
+      return next(
+        new ErrorResponse(
+          "Bạn không có quyền cập nhật task này",
+          403,
+          "NOT_AUTHORIZED",
+        ),
+      );
+    }
   }
-  // Thêm logic kiểm tra nếu là task của team
 
   task = await Task.findByIdAndUpdate(req.params.id, req.body, {
     new: true,
@@ -133,6 +188,7 @@ export const UpdateTask = asyncHandler(async (req, res, next) => {
 // @route   DELETE /api/tasks/:id
 // @access  Private
 export const DeleteTask = asyncHandler(async (req, res, next) => {
+  const userId = String(req.user?.userId || req.user?.id);
   const task = await Task.findById(req.params.id);
 
   if (!task) {
@@ -145,21 +201,34 @@ export const DeleteTask = asyncHandler(async (req, res, next) => {
     );
   }
 
-  // Kiểm tra quyền truy cập (chỉ owner hoặc thành viên team mới được xóa)
-  if (
-    task.ownerUserId &&
-    task.ownerUserId.toString() !== req.user.id &&
-    req.user.role !== "admin"
-  ) {
-    return next(
-      new ErrorResponse(
-        `User ${req.user.id} is not authorized to delete this task`,
-        403,
-        "NOT_AUTHORIZED",
-      ),
-    );
+  // Check delete permission
+  if (task.teamId) {
+    // Team task: check if user is admin/owner of team
+    const teamMember = await TeamMember.findOne({
+      teamId: task.teamId,
+      userId,
+    });
+    if (!teamMember || (teamMember.role !== "owner" && teamMember.role !== "admin")) {
+      return next(
+        new ErrorResponse(
+          "Bạn không có quyền xóa task này",
+          403,
+          "NOT_AUTHORIZED",
+        ),
+      );
+    }
+  } else if (task.ownerUserId) {
+    // Personal task: only owner can delete
+    if (String(task.ownerUserId) !== userId && req.user.role !== "admin") {
+      return next(
+        new ErrorResponse(
+          "Bạn không có quyền xóa task này",
+          403,
+          "NOT_AUTHORIZED",
+        ),
+      );
+    }
   }
-  // Thêm logic kiểm tra nếu là task của team
 
   await task.deleteOne();
 
